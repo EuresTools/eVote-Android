@@ -3,6 +3,7 @@ package eu.eurescom.evote;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -12,14 +13,8 @@ import android.widget.EditText;
 
 import com.google.gson.JsonObject;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.util.Iterator;
-
 import eu.eurescom.evote.Model.Poll;
 import retrofit.Callback;
-import retrofit.ResponseCallback;
 import retrofit.RestAdapter;
 import retrofit.RetrofitError;
 import retrofit.client.Response;
@@ -65,7 +60,13 @@ public class VoteCodeActivity extends Activity {
                     Log.d("", "Valid");
                     JsonObject json_poll = jsonObject.getAsJsonObject("poll");
                     Poll poll = new Poll(json_poll);
+
+                    // Start the poll activity.
+                    Intent intent = new Intent(VoteCodeActivity.this, PollActivity.class);
+                    intent.putExtra("poll", poll);
+                    startActivity(intent);
                 } else {
+                    // Display an alert with the error message.
                     String message = jsonObject.get("message").getAsString();
                     new AlertDialog.Builder(VoteCodeActivity.this)
                     .setTitle("Error")
