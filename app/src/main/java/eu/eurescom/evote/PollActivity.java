@@ -12,11 +12,9 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.ListView;
-import android.widget.Toast;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import eu.eurescom.evote.Model.Poll;
 
@@ -34,16 +32,15 @@ public class PollActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_poll);
 
-        votes = new HashSet<Integer>();
+        votes = new HashSet<>();
         mListView = (ListView) findViewById(R.id.optionsList);
-        mPoll = (Poll) getIntent().getExtras().getParcelable("poll");
+        mPoll = getIntent().getExtras().getParcelable("poll");
         mAdapter = new PollListAdapter(this, R.layout.cell_option, R.id.optionLabel, mPoll.getOptions());
         mListView.setAdapter(mAdapter);
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Log.d("", "Clicked item at position " + position);
-                CheckBox checkBox = (CheckBox) view.findViewById(R.id.checkBox);
 
                 int select = mPoll.getSelect();
                 // If this is a single choice poll, move the selection.
@@ -95,6 +92,7 @@ public class PollActivity extends Activity {
             super(context, resource, textViewResourceId, objects);
         }
 
+        // Make sure the checkboxes are checked appropriately.
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             View view = super.getView(position, convertView, parent);

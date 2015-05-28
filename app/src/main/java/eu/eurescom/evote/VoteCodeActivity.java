@@ -41,8 +41,11 @@ public class VoteCodeActivity extends Activity {
             }
         });
 
+        // Port 5000 on machine hosting the emulator.
+        String url = "http://10.0.2.2:5000";
+        //String url = "https://evoteapi.herokuapp.com";
         RestAdapter restAdapter = new RestAdapter.Builder()
-                .setEndpoint("https://evoteapi.herokuapp.com")
+                .setEndpoint(url)
                 .build();
         mAPIClient = restAdapter.create(APIClient.class);
     }

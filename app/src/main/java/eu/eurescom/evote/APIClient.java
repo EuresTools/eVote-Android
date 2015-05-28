@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 
 
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import retrofit.Callback;
 import retrofit.http.Field;
@@ -25,5 +26,5 @@ public interface APIClient {
 
     @FormUrlEncoded
     @POST("/vote")
-    void submitVoteForCode(@Field("code") String code, @Field("votes") ArrayList<Integer> votes, Callback<JsonObject> cb);
+    void submitVoteForCode(@Field("code") String code, @Field("votes") HashSet<Integer> votes, Callback<JsonObject> cb);
 }
