@@ -6,22 +6,25 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
-import android.widget.ListView;
+import android.widget.TextView;
 
 import java.util.HashSet;
 import java.util.List;
 
 import eu.eurescom.evote.Model.Poll;
+import se.emilsjolander.stickylistheaders.StickyListHeadersAdapter;
+import se.emilsjolander.stickylistheaders.StickyListHeadersListView;
 
 
 public class PollActivity extends Activity {
 
-    private ListView mListView;
+    private StickyListHeadersListView mListView;
     private Poll mPoll;
     private PollListAdapter mAdapter;
 
@@ -33,7 +36,7 @@ public class PollActivity extends Activity {
         setContentView(R.layout.activity_poll);
 
         votes = new HashSet<>();
-        mListView = (ListView) findViewById(R.id.optionsList);
+        mListView = (StickyListHeadersListView) findViewById(R.id.optionsList);
         mPoll = getIntent().getExtras().getParcelable("poll");
         mAdapter = new PollListAdapter(this, R.layout.cell_option, R.id.optionLabel, mPoll.getOptions());
         mListView.setAdapter(mAdapter);
@@ -87,7 +90,7 @@ public class PollActivity extends Activity {
         mAdapter.notifyDataSetChanged();
     }
 
-    private class PollListAdapter extends ArrayAdapter<String> {
+    private class PollListAdapter extends ArrayAdapter<String> implements StickyListHeadersAdapter {
         public PollListAdapter(Context context, int resource, int textViewResourceId, List<String> objects) {
             super(context, resource, textViewResourceId, objects);
         }
@@ -99,6 +102,20 @@ public class PollActivity extends Activity {
             CheckBox checkBox = (CheckBox) view.findViewById(R.id.checkBox);
             checkBox.setChecked(votes.contains(position));
             return view;
+        }
+
+        @Override
+        public View getHeaderView(int position, View convertView, ViewGroup viewGroup) {
+            LayoutInflater inflater = LayoutInflater.from(PollActivity.this);
+            convertView = inflater.inflate(R.layout.header_poll, viewGroup, false);
+            TextView label = (TextView) convertView.findViewById(R.id.queryLabel);
+            label.setText(mPoll.getQuery());
+            return convertView;
+        }
+
+        @Override
+        public long getHeaderId(int i) {
+            return 0;
         }
     }
 }
