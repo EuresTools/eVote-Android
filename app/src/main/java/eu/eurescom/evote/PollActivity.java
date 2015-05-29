@@ -11,13 +11,25 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 import java.util.HashSet;
 import java.util.List;
 
 import eu.eurescom.evote.Model.Poll;
+import retrofit.Callback;
+import retrofit.RestAdapter;
+import retrofit.RetrofitError;
+import retrofit.client.Response;
+import retrofit.converter.GsonConverter;
 import se.emilsjolander.stickylistheaders.StickyListHeadersAdapter;
 import se.emilsjolander.stickylistheaders.StickyListHeadersListView;
 
@@ -25,6 +37,8 @@ import se.emilsjolander.stickylistheaders.StickyListHeadersListView;
 public class PollActivity extends Activity {
 
     private StickyListHeadersListView mListView;
+    private Button mSubmitButton;
+    private APIClient mAPIClient;
     private Poll mPoll;
     private PollListAdapter mAdapter;
 
@@ -36,7 +50,72 @@ public class PollActivity extends Activity {
         setContentView(R.layout.activity_poll);
 
         votes = new HashSet<>();
+
+        // Port 5000 on machine hosting the emulator.
+        String url = "http://10.0.2.2:5000";
+        //String url = "https://evoteapi.herokuapp.com";
+        RestAdapter restAdapter = new RestAdapter.Builder()
+                .setEndpoint(url)
+                .build();
+        mAPIClient = restAdapter.create(APIClient.class);
+
         mListView = (StickyListHeadersListView) findViewById(R.id.optionsList);
+        mSubmitButton = (Button) findViewById(R.id.submitButton);
+        final String code = getIntent().getStringExtra("code");
+        mSubmitButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                JsonObject json = new JsonObject();
+                Gson gson = new Gson();
+                json.add("code", new JsonPrimitive(code));
+                json.add("votes", new JsonPrimitive(gson.toJson(votes)));
+                mAPIClient.submitVoteForCode(json, new Callback<JsonObject>() {
+                    @Override
+                    public void success(JsonObject jsonObject, Response response) {
+                        boolean success = jsonObject.get("success").getAsBoolean();
+                        if(success) {
+                            new AlertDialog.Builder(PollActivity.this)
+                                    .setTitle("Success")
+                                    .setMessage("Your vote was successfully submitted.")
+                                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            finish();
+                                        }
+                                    })
+                                    .show();
+                        }
+                        else {
+                            String message = jsonObject.get("message").getAsString();
+                            new AlertDialog.Builder(PollActivity.this)
+                                    .setTitle("Error")
+                                    .setMessage(message)
+                                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            // Intentionally empty.
+                                        }
+                                    })
+                                    .show();
+                        }
+                    }
+
+                    @Override
+                    public void failure(RetrofitError error) {
+                        new AlertDialog.Builder(PollActivity.this)
+                                .setTitle("Error")
+                                .setMessage("Something went wrong. Please try again later")
+                                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        // Intentionally empty.
+                                    }
+                                })
+                                .show();
+                    }
+                });
+            }
+        });
         mPoll = getIntent().getExtras().getParcelable("poll");
         mAdapter = new PollListAdapter(this, R.layout.cell_option, R.id.optionLabel, mPoll.getOptions());
         mListView.setAdapter(mAdapter);

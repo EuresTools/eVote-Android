@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 
 import retrofit.Callback;
+import retrofit.http.Body;
 import retrofit.http.Field;
 import retrofit.http.FormUrlEncoded;
 import retrofit.http.GET;
@@ -24,7 +25,6 @@ public interface APIClient {
     @GET("/vote")
     void getPollForCode(@Query("code") String code, Callback<JsonObject> cb);
 
-    @FormUrlEncoded
     @POST("/vote")
-    void submitVoteForCode(@Field("code") String code, @Field("votes") HashSet<Integer> votes, Callback<JsonObject> cb);
+    void submitVoteForCode(@Body JsonObject json, Callback<JsonObject> cb);
 }

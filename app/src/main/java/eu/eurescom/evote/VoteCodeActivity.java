@@ -54,7 +54,7 @@ public class VoteCodeActivity extends Activity {
         Log.d("", "Pressed submit");
 
         // This could be designed better using POJOs with Retrofit.
-        String code = mCodeField.getText().toString();
+        final String code = mCodeField.getText().toString();
         mAPIClient.getPollForCode(code, new Callback<JsonObject>() {
             @Override
             public void success(JsonObject jsonObject, Response response) {
@@ -67,6 +67,7 @@ public class VoteCodeActivity extends Activity {
                     // Start the poll activity.
                     Intent intent = new Intent(VoteCodeActivity.this, PollActivity.class);
                     intent.putExtra("poll", poll);
+                    intent.putExtra("code", code);
                     startActivity(intent);
                 } else {
                     // Display an alert with the error message.
