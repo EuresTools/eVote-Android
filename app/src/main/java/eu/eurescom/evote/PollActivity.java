@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.text.Layout;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -71,9 +72,10 @@ public class PollActivity extends Activity {
                     public void success(JsonObject jsonObject, Response response) {
                         boolean success = jsonObject.get("success").getAsBoolean();
                         if(success) {
+                            String message = jsonObject.get("message").getAsString();
                             new AlertDialog.Builder(PollActivity.this)
                                     .setTitle("Success")
-                                    .setMessage("Your vote was successfully submitted.")
+                                    .setMessage(message)
                                     .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
@@ -166,6 +168,13 @@ public class PollActivity extends Activity {
         mAdapter.notifyDataSetChanged();
     }
 
+    // This class acts as a kind of cache for the list rows to make scrolling more smooth.
+    // This is a common thing to do in Android...
+    private static class OptionCellHolder {
+        TextView option;
+        CheckBox checkBox;
+    }
+
     private class PollListAdapter extends ArrayAdapter<String> implements StickyListHeadersAdapter {
         public PollListAdapter(Context context, int resource, int textViewResourceId, List<String> objects) {
             super(context, resource, textViewResourceId, objects);
@@ -174,10 +183,33 @@ public class PollActivity extends Activity {
         // Make sure the checkboxes are checked appropriately.
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            View view = super.getView(position, convertView, parent);
-            CheckBox checkBox = (CheckBox) view.findViewById(R.id.checkBox);
-            checkBox.setChecked(votes.contains(position));
-            return view;
+            OptionCellHolder viewHolder;
+            if(convertView == null) {
+                // Inflate the layout.
+                LayoutInflater inflater = getLayoutInflater();
+                convertView = inflater.inflate(R.layout.cell_option, parent, false);
+
+                // Create a view holder.
+                viewHolder = new OptionCellHolder();
+                viewHolder.option = (TextView) convertView.findViewById(R.id.optionLabel);
+                viewHolder.checkBox = (CheckBox) convertView.findViewById(R.id.checkBox);
+
+                // Store the holder in the view.
+                convertView.setTag(viewHolder);
+            }
+            else {
+                // We've avoided calling findViewById() every time, which saves a lot of compute.
+                viewHolder = (OptionCellHolder) convertView.getTag();
+            }
+
+            viewHolder.option.setText(mPoll.getOptions().get(position));
+            if(votes.contains(position)) {
+                viewHolder.checkBox.setChecked(true);
+            }
+            else {
+                viewHolder.checkBox.setChecked(false);
+            }
+            return convertView;
         }
 
         @Override
