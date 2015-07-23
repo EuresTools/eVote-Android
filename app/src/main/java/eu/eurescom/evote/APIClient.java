@@ -14,11 +14,9 @@ import retrofit.http.Query;
  */
 public interface APIClient {
 
-    // It would be better to create POJOs for the response and make the callbacks receive them.
-    // Then retrofit would parse the JSON automatically.
-    @GET("/vote")
-    void getPollForCode(@Query("code") String code, Callback<JsonObject> cb);
+    @GET("/v1/poll/get")
+    void getPollForCode(@Query("token") String token, Callback<JsonObject> cb);
 
-    @POST("/vote")
-    void submitVoteForCode(@Body JsonObject json, Callback<JsonObject> cb);
+    @POST("/v1/vote/submit")
+    void submitVoteForCode(@Query("token") String token, @Body JsonObject json, Callback<JsonObject> cb);
 }

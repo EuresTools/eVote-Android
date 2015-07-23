@@ -1,5 +1,4 @@
 package eu.eurescom.evote;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -16,12 +15,14 @@ import android.widget.CheckBox;
 import android.widget.TextView;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import eu.eurescom.evote.Model.Option;
 import eu.eurescom.evote.Model.Poll;
 import retrofit.Callback;
 import retrofit.RestAdapter;
@@ -30,61 +31,95 @@ import retrofit.client.Response;
 import se.emilsjolander.stickylistheaders.StickyListHeadersAdapter;
 import se.emilsjolander.stickylistheaders.StickyListHeadersListView;
 
-
 public class PollActivity extends Activity {
 
+    private TextView mTitleLabel;
     private StickyListHeadersListView mListView;
     private Button mSubmitButton;
     private APIClient mAPIClient;
     private Poll mPoll;
+    private String mToken;
     private PollListAdapter mAdapter;
 
-    private HashSet<Integer> votes;
+    private HashSet<Option> votes;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_poll);
 
+        mPoll = (Poll) getIntent().getSerializableExtra("poll");
+        mToken = getIntent().getStringExtra("token");
+        Log.d("", "Token: " + mToken);
+        Log.d("", "Poll: " + mPoll.getTitle());
+
         votes = new HashSet<>();
 
-        // Port 5000 on machine hosting the emulator.
-        String url = "http://10.0.2.2:5000";
-        //String url = "https://evoteapi.herokuapp.com";
+        // Port 82 on machine hosting the emulator.
+        String url = "http://10.0.2.2:82";
         RestAdapter restAdapter = new RestAdapter.Builder()
                 .setEndpoint(url)
                 .build();
         mAPIClient = restAdapter.create(APIClient.class);
 
+        mTitleLabel = (TextView) findViewById(R.id.titleLabel);
+        mTitleLabel.setText(mPoll.getTitle());
         mListView = (StickyListHeadersListView) findViewById(R.id.optionsList);
         mSubmitButton = (Button) findViewById(R.id.submitButton);
-        final String code = getIntent().getStringExtra("code");
+        mAdapter = new PollListAdapter(this, R.layout.cell_option, R.id.optionLabel, mPoll.getOptions());
+        mListView.setAdapter(mAdapter);
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                int max = mPoll.getSelectMax();
+                Option option = mPoll.getOptions().get(position);
+                if (votes.contains(option)) {
+                    votes.remove(option);
+                } else if (max == 1) {
+                    votes.clear();
+                    votes.add(option);
+                } else if (votes.size() < max) {
+                    votes.add(option);
+                } else {
+                    String optionString = max > 1 ? "options" : "option";
+                    new AlertDialog.Builder(PollActivity.this)
+                            .setTitle("Not Allowed")
+                            .setMessage("You cannot select more than " + max + " " + optionString + ".")
+                            .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    // Intentionally empty.
+                                }
+                            })
+                            .show();
+                }
+                updateUI();
+            }
+        });
+
         mSubmitButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                JsonObject json = new JsonObject();
-                Gson gson = new Gson();
-                json.add("code", new JsonPrimitive(code));
-                json.add("votes", new JsonPrimitive(gson.toJson(votes)));
-                mAPIClient.submitVoteForCode(json, new Callback<JsonObject>() {
+                JsonObject json = votesToJSON();
+                mAPIClient.submitVoteForCode(mToken, json, new Callback<JsonObject>() {
                     @Override
                     public void success(JsonObject jsonObject, Response response) {
                         boolean success = jsonObject.get("success").getAsBoolean();
-                        if(success) {
-                            String message = jsonObject.get("message").getAsString();
+                        if (success) {
                             new AlertDialog.Builder(PollActivity.this)
                                     .setTitle("Success")
-                                    .setMessage(message)
+                                    .setMessage("Your vote has been submitted.")
                                     .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
+                                            // Close the poll activity.
                                             finish();
                                         }
                                     })
                                     .show();
-                        }
-                        else {
-                            String message = jsonObject.get("message").getAsString();
+                        } else{
+                            JsonObject error = jsonObject.getAsJsonObject("error");
+                            String message = error.get("message").getAsString();
                             new AlertDialog.Builder(PollActivity.this)
                                     .setTitle("Error")
                                     .setMessage(message)
@@ -100,9 +135,19 @@ public class PollActivity extends Activity {
 
                     @Override
                     public void failure(RetrofitError error) {
+                        Log.d("", "Failure");
+                        Log.d("", error.toString());
+                        String message = "";
+                        if (error.getResponse().getStatus() == 401) {
+                            Log.d("", "Failed because of invalid token");
+                            message = "Invalid voting code";
+                        } else {
+                            Log.d("", "Failed because of unknown stuff");
+                            message = "Something went wrong";
+                        }
                         new AlertDialog.Builder(PollActivity.this)
                                 .setTitle("Error")
-                                .setMessage("Something went wrong. Please try again later")
+                                .setMessage(message)
                                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
@@ -114,54 +159,21 @@ public class PollActivity extends Activity {
                 });
             }
         });
-        mPoll = getIntent().getExtras().getParcelable("poll");
-        mAdapter = new PollListAdapter(this, R.layout.cell_option, R.id.optionLabel, mPoll.getOptions());
-        mListView.setAdapter(mAdapter);
-        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Log.d("", "Clicked item at position " + position);
-
-                int select = mPoll.getSelect();
-                // If this is a single choice poll, move the selection.
-                if(select == 1 ) {
-                    if(votes.contains(position)) {
-                        votes.remove(position);
-                    }
-                    else {
-                        votes.clear();
-                        votes.add(position);
-                    }
-                }
-                else {
-                    // Prevent the user from selecting more options than allowed.
-                    int count = votes.size();
-                    if(count < select || votes.contains(position)) {
-                        if(votes.contains(position)) {
-                            votes.remove(position);
-                        }
-                        else {
-                            votes.add(position);
-                        }
-                    }
-                    else {
-                        // User tried to select more options than allowed.
-                        new AlertDialog.Builder(PollActivity.this)
-                                .setTitle("Not allowed")
-                                .setMessage("You cannot select more than " + select + " options.")
-                                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-
-                                    }
-                                })
-                                .show();
-                    }
-                }
-                updateUI();
-            }
-        });
     }
+
+    private JsonObject votesToJSON() {
+        int[] optionIds = new int[votes.size()];
+        int index = 0;
+        for (Option option : votes) {
+            optionIds[index] = option.getId();
+            index++;
+        }
+        JsonElement arr = new Gson().toJsonTree(optionIds);
+        JsonObject json = new JsonObject();
+        json.add("options", arr);
+        return json;
+    }
+
 
     private void updateUI() {
         mAdapter.notifyDataSetChanged();
@@ -174,8 +186,8 @@ public class PollActivity extends Activity {
         CheckBox checkBox;
     }
 
-    private class PollListAdapter extends ArrayAdapter<String> implements StickyListHeadersAdapter {
-        public PollListAdapter(Context context, int resource, int textViewResourceId, List<String> objects) {
+    private class PollListAdapter extends ArrayAdapter<Option> implements StickyListHeadersAdapter {
+        public PollListAdapter(Context context, int resource, int textViewResourceId, ArrayList<Option> objects) {
             super(context, resource, textViewResourceId, objects);
         }
 
@@ -201,8 +213,9 @@ public class PollActivity extends Activity {
                 viewHolder = (OptionCellHolder) convertView.getTag();
             }
 
-            viewHolder.option.setText(mPoll.getOptions().get(position));
-            if(votes.contains(position)) {
+            Option option = mPoll.getOptions().get(position);
+            viewHolder.option.setText(option.getText());
+            if(votes.contains(option)) {
                 viewHolder.checkBox.setChecked(true);
             }
             else {
@@ -216,7 +229,7 @@ public class PollActivity extends Activity {
             LayoutInflater inflater = LayoutInflater.from(PollActivity.this);
             convertView = inflater.inflate(R.layout.header_poll, viewGroup, false);
             TextView label = (TextView) convertView.findViewById(R.id.queryLabel);
-            label.setText(mPoll.getQuery());
+            label.setText(mPoll.getQuestion());
             return convertView;
         }
 
