@@ -1,6 +1,7 @@
 package eu.eurescom.evote;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
@@ -100,15 +101,24 @@ public class PollActivity extends Activity {
         mSubmitButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                final ProgressDialog progressHUD = ProgressDialog.show(PollActivity.this, null, "Loading");
                 JsonObject json = votesToJSON();
                 mAPIClient.submitVoteForCode(mToken, json, new Callback<JsonObject>() {
                     @Override
                     public void success(JsonObject jsonObject, Response response) {
+                        progressHUD.hide();
                         boolean success = jsonObject.get("success").getAsBoolean();
                         if (success) {
                             new AlertDialog.Builder(PollActivity.this)
                                     .setTitle("Success")
                                     .setMessage("Your vote has been submitted.")
+                                    .setOnDismissListener(new DialogInterface.OnDismissListener() {
+                                        @Override
+                                        public void onDismiss(DialogInterface dialog) {
+                                            // Close the poll activity.
+                                            finish();
+                                        }
+                                    })
                                     .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
@@ -135,6 +145,7 @@ public class PollActivity extends Activity {
 
                     @Override
                     public void failure(RetrofitError error) {
+                        progressHUD.hide();
                         Log.d("", "Failure");
                         Log.d("", error.toString());
                         String message = "";

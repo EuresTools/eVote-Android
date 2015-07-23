@@ -2,6 +2,7 @@ package eu.eurescom.evote;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
@@ -77,11 +78,12 @@ public class VoteCodeActivity extends Activity {
     private void didPressSubmitButton() {
         Log.d("", "Pressed submit");
 
-        // This could be designed better using POJOs with Retrofit.
+        final ProgressDialog progressHUD = ProgressDialog.show(this, null, "Loading");
         final String code = mCodeField.getText().toString();
         mAPIClient.getPollForCode(code, new Callback<JsonObject>() {
             @Override
             public void success(JsonObject jsonObject, Response response) {
+                progressHUD.hide();
                 boolean success = jsonObject.get("success").getAsBoolean();
                 Log.d("", jsonObject.toString());
                 if(success) {
@@ -92,6 +94,7 @@ public class VoteCodeActivity extends Activity {
                     intent.putExtra("poll", poll);
                     intent.putExtra("token", code);
                     startActivity(intent);
+                    mCodeField.setText("");
                 } else {
                     Log.d("", "No Success");
                     JsonObject error = jsonObject.getAsJsonObject("error");
@@ -111,6 +114,7 @@ public class VoteCodeActivity extends Activity {
 
             @Override
             public void failure(RetrofitError error) {
+                progressHUD.hide();
                 Log.d("", "Failure");
                 Log.d("", error.toString());
                 String message = "";
