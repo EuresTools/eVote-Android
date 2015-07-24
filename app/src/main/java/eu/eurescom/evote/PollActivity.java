@@ -110,7 +110,6 @@ public class PollActivity extends Activity {
                         boolean success = jsonObject.get("success").getAsBoolean();
                         if (success) {
                             new AlertDialog.Builder(PollActivity.this)
-                                    .setTitle("Success")
                                     .setMessage("Your vote has been submitted.")
                                     .setOnDismissListener(new DialogInterface.OnDismissListener() {
                                         @Override
@@ -148,14 +147,7 @@ public class PollActivity extends Activity {
                         progressHUD.hide();
                         Log.d("", "Failure");
                         Log.d("", error.toString());
-                        String message = "";
-                        if (error.getResponse().getStatus() == 401) {
-                            Log.d("", "Failed because of invalid token");
-                            message = "Invalid voting code";
-                        } else {
-                            Log.d("", "Failed because of unknown stuff");
-                            message = "Something went wrong";
-                        }
+                        String message = "Something went wrong, try again later.";
                         new AlertDialog.Builder(PollActivity.this)
                                 .setTitle("Error")
                                 .setMessage(message)

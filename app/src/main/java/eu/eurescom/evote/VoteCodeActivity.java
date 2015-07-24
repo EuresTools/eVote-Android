@@ -87,7 +87,6 @@ public class VoteCodeActivity extends Activity {
                 boolean success = jsonObject.get("success").getAsBoolean();
                 Log.d("", jsonObject.toString());
                 if(success) {
-                    Log.d("", "Success");
                     JsonObject json_poll = jsonObject.getAsJsonObject("data");
                     Poll poll = pollFromJson(json_poll);
                     Intent intent = new Intent(VoteCodeActivity.this, PollActivity.class);
@@ -96,7 +95,6 @@ public class VoteCodeActivity extends Activity {
                     startActivity(intent);
                     mCodeField.setText("");
                 } else {
-                    Log.d("", "No Success");
                     JsonObject error = jsonObject.getAsJsonObject("error");
                     String message = error.get("message").getAsString();
                     new AlertDialog.Builder(VoteCodeActivity.this)
@@ -117,14 +115,7 @@ public class VoteCodeActivity extends Activity {
                 progressHUD.hide();
                 Log.d("", "Failure");
                 Log.d("", error.toString());
-                String message = "";
-                if (error.getResponse().getStatus() == 401) {
-                    Log.d("", "Failed because of invalid token");
-                    message = "Invalid voting code";
-                } else {
-                    Log.d("", "Failed because of unknown stuff");
-                    message = "Something went wrong";
-                }
+                String message = "Something went wrong, try again later.";
                 new AlertDialog.Builder(VoteCodeActivity.this)
                         .setTitle("Error")
                         .setMessage(message)
